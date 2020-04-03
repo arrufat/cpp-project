@@ -1,8 +1,8 @@
 /*
-!/.build.sh
+!/build.sh
 !/.clang-format
-!/.CMakeLists.txt
+!/CMakeLists.txt
 !/.editorconfig
-!/.LICENSE
-!/.README.md
+!/LICENSE
+!/README.md
 !/src/
