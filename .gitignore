@@ -3,6 +3,7 @@
 !/.clang-format
 !/CMakeLists.txt
 !/.editorconfig
+!/.gitignore
 !/LICENSE
 !/README.md
 !/src/
