@@ -25,42 +25,79 @@ endif()
 # Enable ccache if it exists
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
+    message(STATUS "CCACHE was found")
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
+
+# Use the mold linker if possible
+find_program(MOLD_FOUND mold)
+if(MOLD_FOUND)
+    message(STATUS "MOLD linker was found")
+    add_compile_options(-fuse-ld=mold)
+    set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 # Optimization flags
 include(CheckCXXCompilerFlag)
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
     if(COMPILER_SUPPORTS_MARCH_NATIVE)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+        add_compile_options(-march=native)
     endif()
 endif()
 
-# OpenMP support
-find_package(OpenMP)
-
-# OpenCV dependency
-find_package(OpenCV REQUIRED)
+# Use TBB for execution policies in GCC
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    find_package(TBB QUIET)
+    if (TBB_FOUND)
+        message(STATUS "TBB was found, enabling execution policies")
+        add_compile_definitions(USE_TBB)
+    else()
+        message(WARNING "TBB was not found, disabling execution policies")
+    endif()
+endif()
 
 # Dependency management
 include(FetchContent)
+# Dependency management
+include(FetchContent)
+# set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
+set(FETCHCONTENT_QUIET FALSE)
+macro(fetch_content name tag repository)
+    FetchContent_Declare(
+        ${name}
+        GIT_REPOSITORY ${repository}
+        GIT_TAG        ${tag}
+        GIT_PROGRESS   TRUE
+        GIT_SHALLOW    TRUE
+        SOURCE_DIR     ${PROJECT_SOURCE_DIR}/external/${name}
+    )
+    message(STATUS "Fetching ${name} ${tag}")
+    FetchContent_MakeAvailable(${name})
+endmacro()
 
-# dlib
-set(DLIB_TAG master)
-FetchContent_Declare(
-    dlib
-    GIT_REPOSITORY https://github.com/davisking/dlib.git
-    GIT_TAG        ${DLIB_TAG}
-    SOURCE_DIR     ${PROJECT_SOURCE_DIR}/external
-)
+# set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# fetch_content(pybind11 v2.10.0 https://github.com/pybind/pybind11.git)
+# fetch_content(csv 2.1.3 https://github.com/vincentlaucsb/csv-parser.git)
+# fetch_content(json v3.10.5 https://github.com/nlohmann/json.git)
 
-message("-- Fetching dlib ${DLIB_TAG}")
-FetchContent_MakeAvailable(dlib)
+# some other libraries
+# find_package(OpenMP)
+# link with #{OpenMP::OpenMP_CXX}
+
+# find_package(OpenCV REQUIRED)
+# include ${OpenCV_INCLUDE_DIRS}
+# link with ${OpenCV_LIBS}
+
+fetch_content(dlib v19.24 https://github.com/davisking/dlib.git)
+fetch_content(fmt 9.0.0 https://github.com/fmtlib/fmt.git)
 
 add_executable(main src/main.cpp)
-target_link_libraries(main PRIVATE dlib::dlib OpenMP::OpenMP_CXX ${OpenCV_LIBS})
-target_include_directories(main PRIVATE src ${OpenCV_INCLUDE_DIRS})
-target_compile_options(main PRIVATE -Wall -Wextra -pedantic -Wno-deprecated-copy)
+target_link_libraries(main PRIVATE dlib::dlib fmt::fmt)
+target_include_directories(main PRIVATE external/fmt/include)
+target_compile_options(main PRIVATE -Wall -Wextra -Wpedantic)
+if (TBB_FOUND)
+    target_link_libraries(main PRIVATE TBB::tbb)
+endif()
 install(TARGETS main DESTINATION bin)
