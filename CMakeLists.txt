@@ -60,9 +60,7 @@ endif()
 
 # Dependency management
 include(FetchContent)
-# Dependency management
-include(FetchContent)
-# set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
+set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
 set(FETCHCONTENT_QUIET FALSE)
 macro(fetch_content name tag repository)
     FetchContent_Declare(
@@ -84,11 +82,11 @@ endmacro()
 
 # some other libraries
 # find_package(OpenMP)
-# link with #{OpenMP::OpenMP_CXX}
+# link against ${OpenMP::OpenMP_CXX}
 
 # find_package(OpenCV REQUIRED)
-# include ${OpenCV_INCLUDE_DIRS}
-# link with ${OpenCV_LIBS}
+# include dirs ${OpenCV_INCLUDE_DIRS}
+# link against ${OpenCV_LIBS}
 
 fetch_content(dlib v19.24 https://github.com/davisking/dlib.git)
 fetch_content(fmt 9.0.0 https://github.com/fmtlib/fmt.git)
